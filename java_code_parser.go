@@ -12,12 +12,12 @@ type MatchGroup string
 
 const (
 	VARIABLE_NAME MatchGroup = "variable_name"
-	FUNCTION_NAME MatchGroup = "function_name"
+	FUNCTION_DECLARATION MatchGroup = "function_declaration"
 	FUNCTION_CALL MatchGroup = "function_call"
 )
 
 var matchMap = map[uint]MatchGroup{
-	0: FUNCTION_NAME,
+	0: FUNCTION_DECLARATION,
 	1: VARIABLE_NAME,
 	2: FUNCTION_CALL,
 }
@@ -27,7 +27,6 @@ func main() {
 	if err != nil {
 		fmt.Println("Error in reading file, error:", err)
 	}
-	fmt.Println("data:", string(code))
 
 	parser := sitter.NewParser()
 	defer parser.Close()
@@ -36,15 +35,15 @@ func main() {
 
 	tree := parser.Parse(code, nil)
 	defer tree.Close()
-	fmt.Println(tree.RootNode())
 
 	queryStr := fmt.Sprintf(`
-  (function_declaration
+    (method_declaration
+      name: (identifier) @%s)
+    (variable_declarator
+      name: (identifier) @%s)
+    (method_invocation
     name: (identifier) @%s)
-  (variable_declarator
-    name: (identifier) @%s)
-  (call_expression
-    function: (identifier) @%s)`, FUNCTION_NAME, VARIABLE_NAME, FUNCTION_CALL)
+`, FUNCTION_DECLARATION, VARIABLE_NAME, FUNCTION_CALL)
 	query, _ := sitter.NewQuery(lang, queryStr)
 	defer query.Close()
 
@@ -62,5 +61,7 @@ func main() {
 		}
 		resultMap[matchMapVal] = append(resultMap[matchMapVal], match.Captures[index].Node.Utf8Text(code))
 	}
-	fmt.Println(resultMap)
+	for k, v := range resultMap {
+		fmt.Printf("%s: %v\n", k, v)
+	}
 }
